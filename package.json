@@ -1,0 +1,28 @@
+{
+  "name": "hangman",
+  "version": "1.0.0",
+  "description": "Hangman built in Elm for coding challenge",
+  "main": "index.js",
+  "scripts": {
+    "test": "elm-test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/churchie317/hangman.git"
+  },
+  "keywords": [
+    "elm",
+    "hangman",
+    "coding-challenge"
+  ],
+  "author": "Eric Churchill",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/churchie317/hangman/issues"
+  },
+  "homepage": "https://github.com/churchie317/hangman#readme",
+  "devDependencies": {
+    "elm": "^0.18.0",
+    "elm-live": "^2.7.4"
+  }
+}
