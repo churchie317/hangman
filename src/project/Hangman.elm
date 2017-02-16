@@ -1,6 +1,7 @@
 module Hangman exposing (..)
 
 import Html exposing (..)
+import Array exposing (..)
 
 
 -- MODEL
@@ -10,6 +11,8 @@ type alias Model =
     { secretWord : String
     , guessSoFar : List String
     , wordSoFar : List String
+    , incorrectGuesses : Int
+    , dictionary : Array String
     }
 
 
@@ -17,7 +20,7 @@ model : Model
 model =
     -- Hardcoded secretWord
     -- TODO: make GET request to fetch word
-    Model "Hi" [] []
+    Model "Hi" [] [] 0 (fromList [ "approvingly", "carnivals" ])
 
 
 
@@ -29,6 +32,18 @@ type Msg
     | Reset
 
 
+guessLetter : String -> Model -> Model
+guessLetter letter model =
+    let
+        guessSoFar =
+            letter :: model.guessSoFar
+    in
+        if String.contains model.secretWord letter then
+            { model | guessSoFar = guessSoFar }
+        else
+            { model | guessSoFar = guessSoFar, incorrectGuesses = model.incorrectGuesses + 1 }
+
+
 update : Msg -> Model -> Model
 update msg model =
     case msg of
@@ -36,7 +51,14 @@ update msg model =
             { model | secretWord = "", guessSoFar = [], wordSoFar = [] }
 
         GuessLetter letter ->
-            { model | guessSoFar = letter :: model.guessSoFar }
+            let
+                guessSoFar =
+                    letter :: model.guessSoFar
+            in
+                if String.contains model.secretWord letter then
+                    { model | guessSoFar = guessSoFar }
+                else
+                    { model | guessSoFar = guessSoFar, incorrectGuesses = model.incorrectGuesses + 1 }
 
 
 
