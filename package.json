@@ -4,7 +4,7 @@
   "description": "Hangman built in Elm for coding challenge",
   "main": "index.js",
   "scripts": {
-    "test": "elm-test",
+    "test": "elm-test src/project/tests/Main.elm",
     "prebuild": "rimraf dist",
     "build": "babel src --out-dir dist --copy-files --ignore project",
     "postbuild": "elm-make /src/project/Main.elm --output",
@@ -30,6 +30,7 @@
     "babel-cli": "^6.23.0",
     "elm": "^0.18.0",
     "elm-live": "^2.7.4",
+    "elm-test": "^0.18.2",
     "rimraf": "^2.5.4"
   }
 }
