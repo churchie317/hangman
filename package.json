@@ -4,7 +4,12 @@
   "description": "Hangman built in Elm for coding challenge",
   "main": "index.js",
   "scripts": {
-    "test": "elm-test"
+    "test": "elm-test",
+    "prebuild": "rimraf dist",
+    "build": "babel src --out-dir dist --copy-files --ignore project",
+    "postbuild": "elm-make /src/project/Main.elm --output",
+    "dev": "elm-reactor",
+    "dev:hot-reload": "elm-live /src/project/Main.elm --open --pushstate --dir=dist --output=dist/elm.js"
   },
   "repository": {
     "type": "git",
@@ -22,7 +27,9 @@
   },
   "homepage": "https://github.com/churchie317/hangman#readme",
   "devDependencies": {
+    "babel-cli": "^6.23.0",
     "elm": "^0.18.0",
-    "elm-live": "^2.7.4"
+    "elm-live": "^2.7.4",
+    "rimraf": "^2.5.4"
   }
 }
