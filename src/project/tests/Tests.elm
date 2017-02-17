@@ -28,7 +28,7 @@ suite =
             ]
         , describe "update functionality"
             [ it "handles Reset messages" <|
-                expect (Hangman.update Hangman.Reset Hangman.model) to equal <|
-                    Hangman.model
+                expect (Hangman.update Hangman.Reset Hangman.initialModel) to equal <|
+                    Hangman.initialModel
             ]
         ]
