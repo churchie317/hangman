@@ -12,7 +12,7 @@ import Array exposing (..)
 type alias Model =
     { secretWord : String
     , currentGuess : String
-    , guessSoFar : List String
+    , guessedSoFar : List String
     , wordSoFar : List String
     , dictionary : Array String
     , incorrectGuesses : Int
@@ -27,6 +27,28 @@ dictionary =
 initialModel : Model
 initialModel =
     Model (getFirstWordFromDictionary dictionary) "" [] [] dictionary 0
+
+
+
+-- UPDATE
+
+
+type Msg
+    = SubmitGuess String
+    | Reset
+    | SetGuess String
+
+
+submitGuess : Model -> String -> Model
+submitGuess model letter =
+    let
+        guessedSoFar =
+            letter :: model.guessedSoFar
+    in
+        if String.contains letter model.secretWord then
+            { model | guessedSoFar = guessedSoFar, currentGuess = "" }
+        else
+            { model | guessedSoFar = guessedSoFar, currentGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
 
 
 getFirstWordFromDictionary : Array String -> String
@@ -45,28 +67,6 @@ getFirstWordFromDictionary dictionary =
                 "Error: Word not found!"
 
 
-
--- UPDATE
-
-
-type Msg
-    = SubmitGuess String
-    | Reset
-    | SetGuess String
-
-
-submitGuess : Model -> String -> Model
-submitGuess model letter =
-    let
-        guessSoFar =
-            letter :: model.guessSoFar
-    in
-        if String.contains letter model.secretWord then
-            { model | guessSoFar = guessSoFar, currentGuess = "" }
-        else
-            { model | guessSoFar = guessSoFar, currentGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
-
-
 update : Msg -> Model -> Model
 update msg model =
     case msg of
@@ -82,7 +82,7 @@ update msg model =
                 Model secretWord "" [] [] dictionary 0
 
         SubmitGuess letter ->
-            (submitGuess model letter)
+            submitGuess model (String.toLower letter)
 
         SetGuess entry ->
             { model | currentGuess = entry }
@@ -94,7 +94,7 @@ update msg model =
 
 isNotMemberOf : List String -> String -> Bool
 isNotMemberOf xs s =
-    not <| List.member s xs
+    not <| List.member (String.toLower s) xs
 
 
 checkDuplicateGuess : List String -> String -> Result String String
@@ -102,34 +102,64 @@ checkDuplicateGuess list str =
     if str |> isNotMemberOf list then
         Ok str
     else
-        Err "Letter already guessed"
+        Err "Sorry, you've already guessed that letter. Please guess a new one."
 
 
 validateGuess : Model -> Html Msg
-validateGuess { currentGuess, guessSoFar } =
+validateGuess { currentGuess, guessedSoFar } =
     let
         result =
             Ok currentGuess
-                |> Result.andThen (checkDuplicateGuess guessSoFar)
+                |> Result.andThen (checkDuplicateGuess guessedSoFar)
     in
         case result of
             Ok _ ->
                 button [ onClick (SubmitGuess currentGuess) ] [ text "Guess Letter" ]
 
             Err errorMessage ->
-                div [ style [ ( "color", "red" ) ] ] [ text errorMessage ]
+                div [ class "error" ] [ text errorMessage ]
+
+
+joinAndUppercase : List String -> String
+joinAndUppercase list =
+    List.map String.toUpper list
+        |> String.join ", "
+
+
+gameOverView : Html Msg
+gameOverView =
+    div [ class "content" ]
+        [ div [ class "error" ]
+            [ text "Game Over :{"
+            , button [ onClick Reset ] [ text "Try Again" ]
+            ]
+        ]
+
+
+submitGuessView : Model -> Html Msg
+submitGuessView model =
+    div [ class "content" ]
+        [ div [] [ text (joinAndUppercase model.guessedSoFar) ]
+        , button [ onClick Reset ] [ text "New Game" ]
+        , input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess ] []
+        , validateGuess model
+        ]
+
+
+contentView : Html Msg -> Html Msg
+contentView view =
+    div []
+        [ header []
+            [ h1 [ class "content" ]
+                [ text "Hangman" ]
+            ]
+        , view
+        ]
 
 
 view : Model -> Html Msg
 view model =
     if model.incorrectGuesses >= 6 then
-        div []
-            [ text "Game Over :{"
-            , button [ onClick Reset ] [ text "Try Again" ]
-            ]
+        contentView gameOverView
     else
-        div []
-            [ button [ onClick Reset ] [ text "Reset" ]
-            , input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess ] []
-            , validateGuess model
-            ]
+        contentView (submitGuessView model)
