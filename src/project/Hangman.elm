@@ -1,6 +1,8 @@
 module Hangman exposing (..)
 
 import Html exposing (..)
+import Html.Events exposing (..)
+import Html.Attributes exposing (..)
 import Array exposing (..)
 
 
@@ -9,18 +11,38 @@ import Array exposing (..)
 
 type alias Model =
     { secretWord : String
+    , setGuess : String
     , guessSoFar : List String
     , wordSoFar : List String
-    , incorrectGuesses : Int
     , dictionary : Array String
+    , incorrectGuesses : Int
     }
 
 
-model : Model
-model =
-    -- Hardcoded secretWord
-    -- TODO: make GET request to fetch word
-    Model "Hi" [] [] 0 (fromList [ "approvingly", "carnivals" ])
+dictionary : Array String
+dictionary =
+    fromList [ "approvingly", "carnivals" ]
+
+
+initialModel : Model
+initialModel =
+    Model (getFirstWordFromDictionary dictionary) "" [] [] dictionary 0
+
+
+getFirstWordFromDictionary : Array String -> String
+getFirstWordFromDictionary dictionary =
+    let
+        -- Hardcoded which element to grab
+        word =
+            Array.get 0 dictionary
+    in
+        case word of
+            Just word ->
+                word
+
+            Nothing ->
+                -- TODO: add some error handling here
+                "Error: Word not found!"
 
 
 
@@ -28,12 +50,13 @@ model =
 
 
 type Msg
-    = GuessLetter String
+    = SubmitGuess String
     | Reset
+    | SetGuess String
 
 
-guessLetter : String -> Model -> Model
-guessLetter letter model =
+submitGuess : Model -> String -> Model
+submitGuess model letter =
     let
         guessSoFar =
             letter :: model.guessSoFar
@@ -48,24 +71,42 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         Reset ->
-            { model | secretWord = "", guessSoFar = [], wordSoFar = [] }
-
-        GuessLetter letter ->
             let
-                guessSoFar =
-                    letter :: model.guessSoFar
+                dictionary =
+                    model.dictionary
+
+                secretWord =
+                    getFirstWordFromDictionary dictionary
             in
-                if String.contains model.secretWord letter then
-                    { model | guessSoFar = guessSoFar }
-                else
-                    { model | guessSoFar = guessSoFar, incorrectGuesses = model.incorrectGuesses + 1 }
+                -- Return new Model
+                Model secretWord "" [] [] dictionary 0
+
+        SubmitGuess letter ->
+            (submitGuess model letter)
+
+        SetGuess entry ->
+            { model | setGuess = entry }
 
 
 
 -- VIEW
--- TODO: incorporate model into view function
 
 
-view : Model -> Html msg
+view : Model -> Html Msg
 view model =
-    div [] [ text "Hello World" ]
+    if model.incorrectGuesses >= 6 then
+        div []
+            [ text "Game Over :{"
+            , button [ onClick Reset ] [ text "Try Again" ]
+            ]
+    else if String.length model.setGuess == 1 then
+        div []
+            [ button [ onClick Reset ] [ text "Reset" ]
+            , input [ onInput SetGuess, placeholder "Guess a Letter" ] []
+            , button [ onClick (SubmitGuess model.setGuess) ] [ text "Guess Letter" ]
+            ]
+    else
+        div []
+            [ button [ onClick Reset ] [ text "Reset" ]
+            , input [ onInput SetGuess ] []
+            ]
