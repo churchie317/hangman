@@ -11,7 +11,7 @@ import Array exposing (..)
 
 type alias Model =
     { secretWord : String
-    , setGuess : String
+    , currentGuess : String
     , guessSoFar : List String
     , wordSoFar : List String
     , dictionary : Array String
@@ -62,9 +62,9 @@ submitGuess model letter =
             letter :: model.guessSoFar
     in
         if String.contains letter model.secretWord then
-            { model | guessSoFar = guessSoFar, setGuess = "" }
+            { model | guessSoFar = guessSoFar, currentGuess = "" }
         else
-            { model | guessSoFar = guessSoFar, setGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
+            { model | guessSoFar = guessSoFar, currentGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
 
 
 update : Msg -> Model -> Model
@@ -85,11 +85,39 @@ update msg model =
             (submitGuess model letter)
 
         SetGuess entry ->
-            { model | setGuess = entry }
+            { model | currentGuess = entry }
 
 
 
 -- VIEW
+
+
+isNotMemberOf : List String -> String -> Bool
+isNotMemberOf xs s =
+    not <| List.member s xs
+
+
+checkDuplicateGuess : List String -> String -> Result String String
+checkDuplicateGuess list str =
+    if str |> isNotMemberOf list then
+        Ok str
+    else
+        Err "Letter already guessed"
+
+
+validateGuess : Model -> Html Msg
+validateGuess { currentGuess, guessSoFar } =
+    let
+        result =
+            Ok currentGuess
+                |> Result.andThen (checkDuplicateGuess guessSoFar)
+    in
+        case result of
+            Ok _ ->
+                button [ onClick (SubmitGuess currentGuess) ] [ text "Guess Letter" ]
+
+            Err errorMessage ->
+                div [ style [ ( "color", "red" ) ] ] [ text errorMessage ]
 
 
 view : Model -> Html Msg
@@ -99,14 +127,9 @@ view model =
             [ text "Game Over :{"
             , button [ onClick Reset ] [ text "Try Again" ]
             ]
-    else if String.length model.setGuess == 1 then
-        div []
-            [ button [ onClick Reset ] [ text "Reset" ]
-            , input [ onInput SetGuess, placeholder "Guess a Letter", value model.setGuess ] []
-            , button [ onClick (SubmitGuess model.setGuess) ] [ text "Guess Letter" ]
-            ]
     else
         div []
             [ button [ onClick Reset ] [ text "Reset" ]
-            , input [ onInput SetGuess, placeholder "Guess a Letter", value model.setGuess ] []
+            , input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess ] []
+            , validateGuess model
             ]
