@@ -92,13 +92,33 @@ update msg model =
 -- VIEW
 
 
+isNotEmptyTextField : String -> Result String String
+isNotEmptyTextField str =
+    if String.length str >= 1 then
+        Ok str
+    else
+        Err ""
+
+
+isLetter : String -> Result String String
+isLetter str =
+    let
+        lowerStr =
+            String.toLower str
+    in
+        if "a" <= lowerStr && lowerStr <= "z" then
+            Ok str
+        else
+            Err "Whoops, make sure your guess is a letter!"
+
+
 isNotMemberOf : List String -> String -> Bool
 isNotMemberOf xs s =
     not <| List.member (String.toLower s) xs
 
 
-checkDuplicateGuess : List String -> String -> Result String String
-checkDuplicateGuess list str =
+isNotDuplicate : List String -> String -> Result String String
+isNotDuplicate list str =
     if str |> isNotMemberOf list then
         Ok str
     else
@@ -110,7 +130,9 @@ validateGuess { currentGuess, guessedSoFar } =
     let
         result =
             Ok currentGuess
-                |> Result.andThen (checkDuplicateGuess guessedSoFar)
+                |> Result.andThen (isNotEmptyTextField)
+                |> Result.andThen (isLetter)
+                |> Result.andThen (isNotDuplicate guessedSoFar)
     in
         case result of
             Ok _ ->
@@ -139,10 +161,16 @@ gameOverView =
 submitGuessView : Model -> Html Msg
 submitGuessView model =
     div [ class "content" ]
-        [ div [] [ text (joinAndUppercase model.guessedSoFar) ]
+        [ div []
+            [ text
+                ("Guessed letters: "
+                    ++ (joinAndUppercase model.guessedSoFar)
+                )
+            ]
         , button [ onClick Reset ] [ text "New Game" ]
         , input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess ] []
         , validateGuess model
+        , div [] [ text ("Incorrect guesses remaining: " ++ (6 - model.incorrectGuesses |> toString)) ]
         ]
 
 
