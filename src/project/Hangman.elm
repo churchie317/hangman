@@ -61,7 +61,7 @@ submitGuess model letter =
         guessSoFar =
             letter :: model.guessSoFar
     in
-        if String.contains model.secretWord letter then
+        if String.contains letter model.secretWord then
             { model | guessSoFar = guessSoFar, setGuess = "" }
         else
             { model | guessSoFar = guessSoFar, setGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
