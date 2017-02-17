@@ -62,9 +62,9 @@ submitGuess model letter =
             letter :: model.guessSoFar
     in
         if String.contains model.secretWord letter then
-            { model | guessSoFar = guessSoFar }
+            { model | guessSoFar = guessSoFar, setGuess = "" }
         else
-            { model | guessSoFar = guessSoFar, incorrectGuesses = model.incorrectGuesses + 1 }
+            { model | guessSoFar = guessSoFar, setGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
 
 
 update : Msg -> Model -> Model
@@ -102,11 +102,11 @@ view model =
     else if String.length model.setGuess == 1 then
         div []
             [ button [ onClick Reset ] [ text "Reset" ]
-            , input [ onInput SetGuess, placeholder "Guess a Letter" ] []
+            , input [ onInput SetGuess, placeholder "Guess a Letter", value model.setGuess ] []
             , button [ onClick (SubmitGuess model.setGuess) ] [ text "Guess Letter" ]
             ]
     else
         div []
             [ button [ onClick Reset ] [ text "Reset" ]
-            , input [ onInput SetGuess ] []
+            , input [ onInput SetGuess, placeholder "Guess a Letter", value model.setGuess ] []
             ]
