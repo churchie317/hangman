@@ -3,6 +3,7 @@ module Hangman exposing (..)
 import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
+import Http
 import Array exposing (..)
 
 
@@ -37,6 +38,7 @@ type Msg
     = SubmitGuess String
     | Reset
     | SetGuess String
+    | LoadWords (Result Http.Error String)
 
 
 submitGuess : Model -> String -> Model
@@ -67,7 +69,7 @@ getFirstWordFromDictionary dictionary =
                 "Error: Word not found!"
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
@@ -79,13 +81,20 @@ update msg model =
                     getFirstWordFromDictionary dictionary
             in
                 -- Return new Model
-                Model secretWord "" [] [] dictionary 0
+                ( Model secretWord "" [] [] dictionary 0, Cmd.none )
 
         SubmitGuess letter ->
-            submitGuess model (String.toLower letter)
+            ( submitGuess model (String.toLower letter), Cmd.none )
 
         SetGuess entry ->
-            { model | currentGuess = entry }
+            ( { model | currentGuess = entry }, Cmd.none )
+
+        LoadWords (Ok words) ->
+            ( { model | dictionary = String.lines words |> Array.fromList }, Cmd.none )
+
+        LoadWords (Err _) ->
+            -- TODO: handle HTTP REQUEST error
+            ( model, Cmd.none )
 
 
 
@@ -191,3 +200,21 @@ view model =
         contentView gameOverView
     else
         contentView (submitGuessView model)
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
+
+
+
+-- HTTP
+
+
+getWords : String -> Cmd Msg
+getWords url =
+    Http.send LoadWords (Http.getString url)
