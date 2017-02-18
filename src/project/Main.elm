@@ -9,7 +9,7 @@ main =
     Html.program
         { init =
             ( Hangman.initialModel
-            , Hangman.getWords
+            , Hangman.getWord
             )
         , view = Hangman.view
         , update = Hangman.update

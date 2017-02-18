@@ -14,9 +14,9 @@ type alias Model =
     { secretWord : String
     , currentGuess : String
     , guessedSoFar : List String
-    , wordSoFar : List String
-    , dictionary : Array String
+    , wordSoFar : Maybe (List String)
     , incorrectGuesses : Int
+    , spinner : Bool
     , error : Maybe Http.Error
     }
 
@@ -28,7 +28,7 @@ dictionary =
 
 initialModel : Model
 initialModel =
-    Model (getFirstWordFromDictionary dictionary) "" [] [] dictionary 0 Nothing
+    Model "" "" [] Nothing 0 True Nothing
 
 
 
@@ -40,6 +40,11 @@ type Msg
     | Reset
     | SetGuess String
     | LoadWords (Result Http.Error String)
+
+
+defaultWord : String
+defaultWord =
+    "pteropine"
 
 
 submitGuess : Model -> String -> Model
@@ -70,40 +75,12 @@ getFirstWordFromDictionary dictionary =
                 "Error: Word not found!"
 
 
-
--- TODO: useful for later
--- handleHttpError : Http.Error -> Model -> ( Model, Cmd Msg )
--- handleHttpError httpErr model =
---     case httpErr of
---         Http.BadUrl err ->
---             ( { model | error = "BAD URL ERROR: " ++ err }, Cmd.none )
---
---         Http.Timeout ->
---             ( { model | error = "TIMEOUT ERROR" }, Cmd.none )
---
---         Http.NetworkError ->
---             ( { model | error = "NETWORK ERROR" }, Cmd.none )
---
---         Http.BadStatus _ ->
---             ( { model | error = "BAD STATUS ERROR" }, Cmd.none )
---
---         Http.BadPayload _ _ ->
---             ( { model | error = "BAD PAYLOAD ERROR" }, Cmd.none )
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            let
-                dictionary =
-                    model.dictionary
-
-                secretWord =
-                    getFirstWordFromDictionary dictionary
-            in
-                -- Return new Model
-                ( Model secretWord "" [] [] dictionary 0 model.error, Cmd.none )
+            -- Return new initial model and fetch new word
+            ( initialModel, getWord )
 
         SubmitGuess letter ->
             ( submitGuess model (String.toLower letter), Cmd.none )
@@ -111,12 +88,11 @@ update msg model =
         SetGuess entry ->
             ( { model | currentGuess = entry }, Cmd.none )
 
-        LoadWords (Ok words) ->
-            ( { model | dictionary = String.lines words |> Array.fromList }, Cmd.none )
+        LoadWords (Ok word) ->
+            ( { model | secretWord = word, spinner = False }, Cmd.none )
 
         LoadWords (Err httpError) ->
-            -- TODO: handle HTTP REQUEST error
-            ( { model | error = Just httpError }, Cmd.none )
+            ( { model | error = Just httpError, secretWord = defaultWord, spinner = False }, Cmd.none )
 
 
 
@@ -179,6 +155,27 @@ joinAndUppercase list =
         |> String.join ", "
 
 
+
+-- TODO: refactor for view
+-- handleHttpError : Http.Error -> Model -> ( Model, Cmd Msg )
+-- handleHttpError httpErr model =
+--     case httpErr of
+--         Http.BadUrl err ->
+--             ( { model | error = "BAD URL ERROR: " ++ err }, Cmd.none )
+--
+--         Http.Timeout ->
+--             ( { model | error = "TIMEOUT ERROR" }, Cmd.none )
+--
+--         Http.NetworkError ->
+--             ( { model | error = "NETWORK ERROR" }, Cmd.none )
+--
+--         Http.BadStatus _ ->
+--             ( { model | error = "BAD STATUS ERROR" }, Cmd.none )
+--
+--         Http.BadPayload _ _ ->
+--             ( { model | error = "BAD PAYLOAD ERROR" }, Cmd.none )
+
+
 gameOverView : Html Msg
 gameOverView =
     div [ class "content" ]
@@ -218,7 +215,9 @@ contentView view =
 
 view : Model -> Html Msg
 view model =
-    if model.incorrectGuesses >= 6 then
+    if model.spinner then
+        contentView (div [] [])
+    else if model.incorrectGuesses >= 6 then
         contentView gameOverView
     else
         contentView (submitGuessView model)
@@ -244,7 +243,7 @@ type alias Request =
     }
 
 
-getWords : Cmd Msg
-getWords =
-    Http.getString "http://linkedin-reach.hagbpyjegb.us-west-2.elasticbeanstalk.com/words"
+getWord : Cmd Msg
+getWord =
+    Http.getString "/getword"
         |> Http.send LoadWords
