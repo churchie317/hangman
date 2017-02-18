@@ -13,8 +13,9 @@ import Array exposing (..)
 type alias Model =
     { secretWord : String
     , currentGuess : String
+    , secretWordCharList : List String
     , guessedSoFar : List String
-    , wordSoFar : Maybe (List String)
+    , wordSoFar : List String
     , incorrectGuesses : Int
     , spinner : Bool
     , error : Maybe Http.Error
@@ -28,7 +29,7 @@ dictionary =
 
 initialModel : Model
 initialModel =
-    Model "" "" [] Nothing 0 True Nothing
+    Model "" "" [] [] [] 0 True Nothing
 
 
 
@@ -39,7 +40,7 @@ type Msg
     = SubmitGuess String
     | Reset
     | SetGuess String
-    | LoadWords (Result Http.Error String)
+    | LoadWord (Result Http.Error String)
 
 
 defaultWord : String
@@ -52,9 +53,12 @@ submitGuess model letter =
     let
         guessedSoFar =
             letter :: model.guessedSoFar
+
+        wordSoFar =
+            List.map2 (mapCharToUnderscore letter) model.secretWordCharList model.wordSoFar
     in
         if String.contains letter model.secretWord then
-            { model | guessedSoFar = guessedSoFar, currentGuess = "" }
+            { model | guessedSoFar = guessedSoFar, currentGuess = "", wordSoFar = wordSoFar }
         else
             { model | guessedSoFar = guessedSoFar, currentGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
 
@@ -75,6 +79,14 @@ getFirstWordFromDictionary dictionary =
                 "Error: Word not found!"
 
 
+mapCharToUnderscore : String -> String -> String -> String
+mapCharToUnderscore letter str1 str2 =
+    if str1 == letter || str2 /= "_" then
+        String.toUpper str1
+    else
+        "_"
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -88,11 +100,21 @@ update msg model =
         SetGuess entry ->
             ( { model | currentGuess = entry }, Cmd.none )
 
-        LoadWords (Ok word) ->
-            ( { model | secretWord = word, spinner = False }, Cmd.none )
+        LoadWord (Ok word) ->
+            let
+                wordSoFar : List String
+                wordSoFar =
+                    List.repeat (String.length word) "_"
+            in
+                ( { model | secretWord = word, spinner = False, wordSoFar = wordSoFar, secretWordCharList = String.split "" word }, Cmd.none )
 
-        LoadWords (Err httpError) ->
-            ( { model | error = Just httpError, secretWord = defaultWord, spinner = False }, Cmd.none )
+        LoadWord (Err httpError) ->
+            let
+                wordSoFar : List String
+                wordSoFar =
+                    List.repeat (String.length defaultWord) "_"
+            in
+                ( { model | error = Just httpError, wordSoFar = wordSoFar, secretWord = defaultWord, spinner = False, secretWordCharList = String.split "" defaultWord }, Cmd.none )
 
 
 
@@ -176,12 +198,25 @@ joinAndUppercase list =
 --             ( { model | error = "BAD PAYLOAD ERROR" }, Cmd.none )
 
 
+isLength : String -> Int -> Bool
+isLength str2 int =
+    String.length str2 == int
+
+
+isGameWon : Model -> Bool
+isGameWon model =
+    model.wordSoFar
+        |> List.filter (\x -> x /= "_")
+        |> List.length
+        |> isLength model.secretWord
+
+
 gameOverView : Html Msg
 gameOverView =
     div [ class "content" ]
         [ div [ class "error" ]
             [ text "Game Over :{"
-            , button [ onClick Reset ] [ text "Try Again" ]
+            , button [ onClick Reset ] [ text "Play again?" ]
             ]
         ]
 
@@ -199,6 +234,7 @@ submitGuessView model =
         , input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess ] []
         , validateGuess model
         , div [] [ text ("Incorrect guesses remaining: " ++ (6 - model.incorrectGuesses |> toString)) ]
+        , div [] [ text ("Word so far: " ++ (String.join " " model.wordSoFar)) ]
         ]
 
 
@@ -218,6 +254,8 @@ view model =
     if model.spinner then
         contentView (div [] [])
     else if model.incorrectGuesses >= 6 then
+        contentView gameOverView
+    else if isGameWon model then
         contentView gameOverView
     else
         contentView (submitGuessView model)
@@ -246,4 +284,4 @@ type alias Request =
 getWord : Cmd Msg
 getWord =
     Http.getString "/getword"
-        |> Http.send LoadWords
+        |> Http.send LoadWord
