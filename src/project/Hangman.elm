@@ -17,6 +17,7 @@ type alias Model =
     , wordSoFar : List String
     , dictionary : Array String
     , incorrectGuesses : Int
+    , error : Maybe Http.Error
     }
 
 
@@ -27,7 +28,7 @@ dictionary =
 
 initialModel : Model
 initialModel =
-    Model (getFirstWordFromDictionary dictionary) "" [] [] dictionary 0
+    Model (getFirstWordFromDictionary dictionary) "" [] [] dictionary 0 Nothing
 
 
 
@@ -69,6 +70,27 @@ getFirstWordFromDictionary dictionary =
                 "Error: Word not found!"
 
 
+
+-- TODO: useful for later
+-- handleHttpError : Http.Error -> Model -> ( Model, Cmd Msg )
+-- handleHttpError httpErr model =
+--     case httpErr of
+--         Http.BadUrl err ->
+--             ( { model | error = "BAD URL ERROR: " ++ err }, Cmd.none )
+--
+--         Http.Timeout ->
+--             ( { model | error = "TIMEOUT ERROR" }, Cmd.none )
+--
+--         Http.NetworkError ->
+--             ( { model | error = "NETWORK ERROR" }, Cmd.none )
+--
+--         Http.BadStatus _ ->
+--             ( { model | error = "BAD STATUS ERROR" }, Cmd.none )
+--
+--         Http.BadPayload _ _ ->
+--             ( { model | error = "BAD PAYLOAD ERROR" }, Cmd.none )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -81,7 +103,7 @@ update msg model =
                     getFirstWordFromDictionary dictionary
             in
                 -- Return new Model
-                ( Model secretWord "" [] [] dictionary 0, Cmd.none )
+                ( Model secretWord "" [] [] dictionary 0 model.error, Cmd.none )
 
         SubmitGuess letter ->
             ( submitGuess model (String.toLower letter), Cmd.none )
@@ -92,9 +114,9 @@ update msg model =
         LoadWords (Ok words) ->
             ( { model | dictionary = String.lines words |> Array.fromList }, Cmd.none )
 
-        LoadWords (Err _) ->
+        LoadWords (Err httpError) ->
             -- TODO: handle HTTP REQUEST error
-            ( model, Cmd.none )
+            ( { model | error = Just httpError }, Cmd.none )
 
 
 
@@ -215,6 +237,14 @@ subscriptions model =
 -- HTTP
 
 
-getWords : String -> Cmd Msg
-getWords url =
-    Http.send LoadWords (Http.getString url)
+type alias Request =
+    { verb : String
+    , headers : List ( String, String )
+    , url : String
+    }
+
+
+getWords : Cmd Msg
+getWords =
+    Http.getString "http://linkedin-reach.hagbpyjegb.us-west-2.elasticbeanstalk.com/words"
+        |> Http.send LoadWords

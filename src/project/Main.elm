@@ -9,7 +9,7 @@ main =
     Html.program
         { init =
             ( Hangman.initialModel
-            , Hangman.getWords "http://linkedin-reach.hagbpyjegb.us-west-2.elasticbeanstalk.com/words"
+            , Hangman.getWords
             )
         , view = Hangman.view
         , update = Hangman.update
