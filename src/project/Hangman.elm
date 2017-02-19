@@ -165,10 +165,15 @@ validateGuess { currentGuess, guessedSoFar } =
     in
         case result of
             Ok _ ->
-                button [ onClick (SubmitGuess currentGuess) ] [ text "Guess Letter" ]
+                div []
+                    [ button [ onClick (SubmitGuess currentGuess), class "search", disabled False ] [ text "Guess Letter" ]
+                    ]
 
             Err errorMessage ->
-                div [ class "error" ] [ text errorMessage ]
+                div []
+                    [ button [ onClick (SubmitGuess currentGuess), class "search", disabled True ] [ text "Guess Letter" ]
+                    , div [ class "error" ] [ text errorMessage ]
+                    ]
 
 
 joinAndUppercase : List String -> String
@@ -221,20 +226,21 @@ gameOverView =
         ]
 
 
-submitGuessView : Model -> Html Msg
-submitGuessView model =
+activeGameView : Model -> Html Msg
+activeGameView model =
     div [ class "content" ]
-        [ div []
+        [ div [ class "board" ]
             [ text
                 ("Guessed letters: "
                     ++ (joinAndUppercase model.guessedSoFar)
                 )
+            , div [] [ text ("Word so far: " ++ (String.join " " model.wordSoFar)) ]
+            , div [] [ text ("Incorrect guesses remaining: " ++ (6 - model.incorrectGuesses |> toString)) ]
             ]
-        , button [ onClick Reset ] [ text "New Game" ]
-        , input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess ] []
-        , validateGuess model
-        , div [] [ text ("Incorrect guesses remaining: " ++ (6 - model.incorrectGuesses |> toString)) ]
-        , div [] [ text ("Word so far: " ++ (String.join " " model.wordSoFar)) ]
+        , div [ class "center" ]
+            [ input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess, class "input" ] []
+            , validateGuess model
+            ]
         ]
 
 
@@ -242,8 +248,13 @@ contentView : Html Msg -> Html Msg
 contentView view =
     div []
         [ header []
-            [ h1 [ class "content" ]
-                [ text "Hangman" ]
+            [ ul []
+                [ li []
+                    [ h1 [ class "content" ]
+                        [ text "Hangman" ]
+                    ]
+                , button [ onClick Reset, class "reset" ] [ text "New Game" ]
+                ]
             ]
         , view
         ]
@@ -258,7 +269,7 @@ view model =
     else if isGameWon model then
         contentView gameOverView
     else
-        contentView (submitGuessView model)
+        contentView (activeGameView model)
 
 
 
