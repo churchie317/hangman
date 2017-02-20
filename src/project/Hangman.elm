@@ -57,8 +57,8 @@ mapUnderscoreToLetter toMatch source target =
         "_"
 
 
-submitGuess : Model -> String -> Model
-submitGuess model guess =
+submitGuess : String -> Model -> Model
+submitGuess guess model =
     let
         guessedSoFar =
             guess :: model.guessedSoFar
@@ -89,7 +89,7 @@ update msg model =
             ( initialModel, getWord )
 
         SubmitGuess guess ->
-            ( submitGuess model (String.toLower guess), Cmd.none )
+            ( submitGuess (String.toLower guess) model, Cmd.none )
 
         SetGuess input ->
             ( { model | currentGuess = input }, Cmd.none )
@@ -141,14 +141,14 @@ isLetter str =
 
 
 isNotMemberOf : List String -> String -> Bool
-isNotMemberOf xs s =
-    not <| List.member (String.toLower s) xs
+isNotMemberOf list string =
+    not <| List.member (String.toLower string) list
 
 
 isNotDuplicate : List String -> String -> Result String String
-isNotDuplicate list str =
-    if str |> isNotMemberOf list then
-        Ok str
+isNotDuplicate list string =
+    if string |> isNotMemberOf list then
+        Ok string
     else
         Err "You've already guessed that letter. Please try another one."
 
