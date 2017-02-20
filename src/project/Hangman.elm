@@ -4,7 +4,6 @@ import Html exposing (..)
 import Html.Events exposing (..)
 import Html.Attributes exposing (..)
 import Http
-import Array exposing (..)
 
 
 -- MODEL
@@ -20,11 +19,6 @@ type alias Model =
     , spinner : Bool
     , error : Maybe Http.Error
     }
-
-
-dictionary : Array String
-dictionary =
-    fromList [ "approvingly", "carnivals" ]
 
 
 initialModel : Model
@@ -55,36 +49,37 @@ submitGuess model letter =
             letter :: model.guessedSoFar
 
         wordSoFar =
-            List.map2 (mapCharToUnderscore letter) model.secretWordCharList model.wordSoFar
+            List.map2
+                (mapUnderscoreToLetter letter)
+                model.secretWordCharList
+                model.wordSoFar
+
+        newModel =
+            { model
+                | guessedSoFar = guessedSoFar
+                , currentGuess = ""
+                , wordSoFar = wordSoFar
+            }
     in
         if String.contains letter model.secretWord then
-            { model | guessedSoFar = guessedSoFar, currentGuess = "", wordSoFar = wordSoFar }
+            { newModel | wordSoFar = wordSoFar }
         else
-            { model | guessedSoFar = guessedSoFar, currentGuess = "", incorrectGuesses = model.incorrectGuesses + 1 }
+            { newModel | incorrectGuesses = model.incorrectGuesses + 1 }
 
 
-getFirstWordFromDictionary : Array String -> String
-getFirstWordFromDictionary dictionary =
-    let
-        -- Hardcoded which element to grab
-        word =
-            Array.get 0 dictionary
-    in
-        case word of
-            Just word ->
-                word
-
-            Nothing ->
-                -- TODO: add some error handling here
-                "Error: Word not found!"
-
-
-mapCharToUnderscore : String -> String -> String -> String
-mapCharToUnderscore letter str1 str2 =
-    if str1 == letter || str2 /= "_" then
-        String.toUpper str1
+mapUnderscoreToLetter : String -> String -> String -> String
+mapUnderscoreToLetter toMatch source target =
+    if source == toMatch then
+        String.toUpper source
+    else if target /= "_" then
+        target
     else
         "_"
+
+
+wordSoFar : String -> List String
+wordSoFar word =
+    List.repeat (String.length word) "_"
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -101,20 +96,25 @@ update msg model =
             ( { model | currentGuess = entry }, Cmd.none )
 
         LoadWord (Ok word) ->
-            let
-                wordSoFar : List String
-                wordSoFar =
-                    List.repeat (String.length word) "_"
-            in
-                ( { model | secretWord = word, spinner = False, wordSoFar = wordSoFar, secretWordCharList = String.split "" word }, Cmd.none )
+            ( { model
+                | secretWord = word
+                , spinner = False
+                , wordSoFar = wordSoFar word
+                , secretWordCharList = String.split "" word
+              }
+            , Cmd.none
+            )
 
         LoadWord (Err httpError) ->
-            let
-                wordSoFar : List String
-                wordSoFar =
-                    List.repeat (String.length defaultWord) "_"
-            in
-                ( { model | error = Just httpError, wordSoFar = wordSoFar, secretWord = defaultWord, spinner = False, secretWordCharList = String.split "" defaultWord }, Cmd.none )
+            ( { model
+                | error = Just httpError
+                , wordSoFar = wordSoFar defaultWord
+                , secretWord = defaultWord
+                , spinner = False
+                , secretWordCharList = String.split "" defaultWord
+              }
+            , Cmd.none
+            )
 
 
 
@@ -151,7 +151,7 @@ isNotDuplicate list str =
     if str |> isNotMemberOf list then
         Ok str
     else
-        Err "Sorry, you've already guessed that letter. Please guess a new one."
+        Err "Yikes, you've already guessed that letter. Please try another one."
 
 
 validateGuess : Model -> Html Msg
@@ -166,12 +166,14 @@ validateGuess { currentGuess, guessedSoFar } =
         case result of
             Ok _ ->
                 div []
-                    [ button [ onClick (SubmitGuess currentGuess), class "search", disabled False ] [ text "Guess Letter" ]
+                    [ button [ onClick (SubmitGuess currentGuess), class "search", disabled False ]
+                        [ text "Guess Letter" ]
                     ]
 
             Err errorMessage ->
                 div []
-                    [ button [ onClick (SubmitGuess currentGuess), class "search", disabled True ] [ text "Guess Letter" ]
+                    [ button [ onClick (SubmitGuess currentGuess), class "search", disabled True ]
+                        [ text "Guess Letter" ]
                     , div [ class "error" ] [ text errorMessage ]
                     ]
 
@@ -216,13 +218,19 @@ isGameWon model =
         |> isLength model.secretWord
 
 
-gameOverView : Html Msg
-gameOverView =
+gameOverView : Model -> Html Msg
+gameOverView model =
     div [ class "content" ]
         [ div [ class "error" ]
-            [ text "Game Over :{"
-            , button [ onClick Reset ] [ text "Play again?" ]
-            ]
+            [ text ("Game Over: your word was " ++ model.secretWord) ]
+        ]
+
+
+gameWonView : Model -> Html Msg
+gameWonView model =
+    div [ class "content" ]
+        [ div [ class "error" ]
+            [ text ("Congratulations! You successfully guessed the word: " ++ model.secretWord) ]
         ]
 
 
@@ -238,7 +246,14 @@ activeGameView model =
             , div [] [ text ("Incorrect guesses remaining: " ++ (6 - model.incorrectGuesses |> toString)) ]
             ]
         , div [ class "center" ]
-            [ input [ onInput SetGuess, maxlength 1, placeholder "Guess a Letter", value model.currentGuess, class "input" ] []
+            [ input
+                [ onInput SetGuess
+                , maxlength 1
+                , placeholder "Guess a Letter"
+                , value model.currentGuess
+                , class "input"
+                ]
+                []
             , validateGuess model
             ]
         ]
@@ -263,11 +278,11 @@ contentView view =
 view : Model -> Html Msg
 view model =
     if model.spinner then
-        contentView (div [] [])
+        contentView (div [ class "spinner" ] [])
     else if model.incorrectGuesses >= 6 then
-        contentView gameOverView
+        contentView (gameOverView model)
     else if isGameWon model then
-        contentView gameOverView
+        contentView (gameOverView model)
     else
         contentView (activeGameView model)
 
