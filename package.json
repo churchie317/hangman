@@ -9,8 +9,7 @@
     "build": "babel src --out-dir dist --copy-files --ignore project",
     "postbuild": "elm-make ./src/project/Main.elm --output ./dist/elm.js",
     "start": "npm run build && node server.js",
-    "dev": "elm-reactor",
-    "dev:hot-reload": "npm run build && elm-live ./src/project/Main.elm --open --pushstate --dir=./dist --output=dist/elm.js"
+    "dev": "elm-reactor"
   },
   "repository": {
     "type": "git",
