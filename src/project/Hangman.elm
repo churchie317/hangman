@@ -12,7 +12,7 @@ import Http
 type alias Model =
     { secretWord : String
     , currentGuess : String
-    , secretWordCharList : List String
+    , secretWordListified : List String
     , guessedSoFar : List String
     , wordSoFar : List String
     , incorrectGuesses : Int
@@ -42,29 +42,9 @@ defaultWord =
     "pteropine"
 
 
-submitGuess : Model -> String -> Model
-submitGuess model letter =
-    let
-        guessedSoFar =
-            letter :: model.guessedSoFar
-
-        wordSoFar =
-            List.map2
-                (mapUnderscoreToLetter letter)
-                model.secretWordCharList
-                model.wordSoFar
-
-        newModel =
-            { model
-                | guessedSoFar = guessedSoFar
-                , currentGuess = ""
-                , wordSoFar = wordSoFar
-            }
-    in
-        if String.contains letter model.secretWord then
-            { newModel | wordSoFar = wordSoFar }
-        else
-            { newModel | incorrectGuesses = model.incorrectGuesses + 1 }
+wordSoFar : String -> List String
+wordSoFar word =
+    List.repeat (String.length word) "_"
 
 
 mapUnderscoreToLetter : String -> String -> String -> String
@@ -77,30 +57,49 @@ mapUnderscoreToLetter toMatch source target =
         "_"
 
 
-wordSoFar : String -> List String
-wordSoFar word =
-    List.repeat (String.length word) "_"
+submitGuess : Model -> String -> Model
+submitGuess model guess =
+    let
+        guessedSoFar =
+            guess :: model.guessedSoFar
+
+        wordSoFar =
+            List.map2
+                (mapUnderscoreToLetter guess)
+                model.secretWordListified
+                model.wordSoFar
+
+        updatedModel =
+            { model
+                | guessedSoFar = guessedSoFar
+                , currentGuess = ""
+                , wordSoFar = wordSoFar
+            }
+    in
+        if model.secretWord |> String.contains guess then
+            { updatedModel | wordSoFar = wordSoFar }
+        else
+            { updatedModel | incorrectGuesses = model.incorrectGuesses + 1 }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Reset ->
-            -- Return new initial model and fetch new word
             ( initialModel, getWord )
 
-        SubmitGuess letter ->
-            ( submitGuess model (String.toLower letter), Cmd.none )
+        SubmitGuess guess ->
+            ( submitGuess model (String.toLower guess), Cmd.none )
 
-        SetGuess entry ->
-            ( { model | currentGuess = entry }, Cmd.none )
+        SetGuess input ->
+            ( { model | currentGuess = input }, Cmd.none )
 
         LoadWord (Ok word) ->
             ( { model
                 | secretWord = word
                 , spinner = False
                 , wordSoFar = wordSoFar word
-                , secretWordCharList = String.split "" word
+                , secretWordListified = String.split "" word
               }
             , Cmd.none
             )
@@ -111,7 +110,7 @@ update msg model =
                 , wordSoFar = wordSoFar defaultWord
                 , secretWord = defaultWord
                 , spinner = False
-                , secretWordCharList = String.split "" defaultWord
+                , secretWordListified = String.split "" defaultWord
               }
             , Cmd.none
             )
@@ -151,7 +150,7 @@ isNotDuplicate list str =
     if str |> isNotMemberOf list then
         Ok str
     else
-        Err "Yikes, you've already guessed that letter. Please try another one."
+        Err "You've already guessed that letter. Please try another one."
 
 
 validateGuess : Model -> Html Msg
@@ -184,27 +183,6 @@ joinAndUppercase list =
         |> String.join ", "
 
 
-
--- TODO: refactor for view
--- handleHttpError : Http.Error -> Model -> ( Model, Cmd Msg )
--- handleHttpError httpErr model =
---     case httpErr of
---         Http.BadUrl err ->
---             ( { model | error = "BAD URL ERROR: " ++ err }, Cmd.none )
---
---         Http.Timeout ->
---             ( { model | error = "TIMEOUT ERROR" }, Cmd.none )
---
---         Http.NetworkError ->
---             ( { model | error = "NETWORK ERROR" }, Cmd.none )
---
---         Http.BadStatus _ ->
---             ( { model | error = "BAD STATUS ERROR" }, Cmd.none )
---
---         Http.BadPayload _ _ ->
---             ( { model | error = "BAD PAYLOAD ERROR" }, Cmd.none )
-
-
 isLength : String -> Int -> Bool
 isLength str2 int =
     String.length str2 == int
@@ -222,7 +200,9 @@ gameOverView : Model -> Html Msg
 gameOverView model =
     div [ class "content" ]
         [ div [ class "error" ]
-            [ text ("Game Over: your word was " ++ model.secretWord) ]
+            [ text "Game Over! "
+            , text ("Your word was: " ++ String.toUpper model.secretWord)
+            ]
         ]
 
 
@@ -230,7 +210,10 @@ gameWonView : Model -> Html Msg
 gameWonView model =
     div [ class "content" ]
         [ div [ class "error" ]
-            [ text ("Congratulations! You successfully guessed the word: " ++ model.secretWord) ]
+            [ text "Congratulations! "
+            , text
+                ("You successfully guessed the word: " ++ String.toUpper model.secretWord)
+            ]
         ]
 
 
@@ -277,12 +260,14 @@ contentView view =
 
 view : Model -> Html Msg
 view model =
-    if model.spinner then
+    if model.error /= Nothing then
+        contentView (div [] [ text "Whoops, something went wrong. Please check your connection and try again later." ])
+    else if model.spinner then
         contentView (div [ class "spinner" ] [])
     else if model.incorrectGuesses >= 6 then
         contentView (gameOverView model)
     else if isGameWon model then
-        contentView (gameOverView model)
+        contentView (gameWonView model)
     else
         contentView (activeGameView model)
 
