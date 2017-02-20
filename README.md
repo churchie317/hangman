@@ -2,7 +2,7 @@
 
 An implementation of Hangman built in Elm.
 
-![example](images/example.png)
+![output](images/example.png)
 
 ## Installation
 
