@@ -1,34 +1,86 @@
 module Tests exposing (..)
 
-import Array exposing (Array)
+import Http
 import Test exposing (..)
 import Expect exposing (..)
 import ElmTestBDDStyle exposing (..)
-import Hangman
+import Hangman exposing (..)
+
+
+dummyModel : Model
+dummyModel =
+    Model
+        "approvingly"
+        ""
+        [ "a", "p", "p", "r", "o", "v", "i", "n", "g", "l", "y" ]
+        [ "y", "x" ]
+        [ "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_" ]
+        2
+        False
+        Nothing
 
 
 suite : Test
 suite =
     describe "Validation Suite"
-        [ describe "getFirstWordFromDictionary"
-            [ it "returns first word from list when word exists" <|
-                let
-                    dictionary =
-                        Array.fromList [ "approvingly", "carnivals" ]
-                in
-                    expect (Hangman.getFirstWordFromDictionary dictionary) to equal <|
-                        "approvingly"
-            , it "returns a String when array is empty" <|
-                let
-                    dictionary =
-                        Array.fromList []
-                in
-                    expect (Hangman.getFirstWordFromDictionary dictionary) to equal <|
-                        "Error: Word not found!"
+        [ describe "update"
+            [ it "should handle Reset messages" <|
+                expect (update Reset dummyModel) to equal <|
+                    ( initialModel, getWord )
+              -- , it "should handle SubmitGuess"
+            , it "should handle SubmitGuess messages" <|
+                expect (update (SubmitGuess "p") dummyModel) to equal <|
+                    ( submitGuess dummyModel "p", Cmd.none )
+            , it "should handle SetGuess messages" <|
+                expect (update (SetGuess "z") dummyModel) to equal <|
+                    ( { dummyModel | currentGuess = "z" }, Cmd.none )
+            , it "should handle LoadWord when word successfully retrieved from server" <|
+                expect (update (LoadWord (Ok "pteropine")) initialModel) to equal <|
+                    ( { initialModel
+                        | secretWord = "pteropine"
+                        , spinner = False
+                        , wordSoFar = wordSoFar "pteropine"
+                        , secretWordListified = String.split "" "pteropine"
+                      }
+                    , Cmd.none
+                    )
+            , it "should fail gracefully when word not retrieved from server" <|
+                expect (update (LoadWord (Err Http.NetworkError)) initialModel) to equal <|
+                    ( { initialModel
+                        | secretWord = "pteropine"
+                        , spinner = False
+                        , wordSoFar = wordSoFar "pteropine"
+                        , secretWordListified = String.split "" "pteropine"
+                        , error = Just Http.NetworkError
+                      }
+                    , Cmd.none
+                    )
             ]
-        , describe "update functionality"
-            [ it "handles Reset messages" <|
-                expect (Hangman.update Hangman.Reset Hangman.initialModel) to equal <|
-                    Hangman.initialModel
+        , describe "mapUnderscoreToLetter"
+            [ it "should return underscore string when source does not match toMatch" <|
+                expect (mapUnderscoreToLetter "a" "b" "_") to equal <|
+                    "_"
+            , it "should return target when target is not underscore string" <|
+                expect (mapUnderscoreToLetter "c" "f" "A") to equal <|
+                    "A"
+            , it "should return source when toMatch matches source" <|
+                expect (mapUnderscoreToLetter "c" "c" "_") to equal <|
+                    "C"
+            ]
+        , describe "submitGuess"
+            [ it "should update incorrectGuesses when guess not in secretWord" <|
+                expect (submitGuess dummyModel "z").incorrectGuesses to equal <|
+                    3
+            , it "should update model when guess in secretWord" <|
+                expect (submitGuess dummyModel "p") to equal <|
+                    Model
+                        "approvingly"
+                        ""
+                        [ "a", "p", "p", "r", "o", "v", "i", "n", "g", "l", "y" ]
+                        [ "p", "y", "x" ]
+                        [ "_", "P", "P", "_", "_", "_", "_", "_", "_", "_", "_" ]
+                        2
+                        False
+                        Nothing
             ]
         ]
