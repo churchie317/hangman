@@ -30,7 +30,7 @@ suite =
               -- , it "should handle SubmitGuess"
             , it "should handle SubmitGuess messages" <|
                 expect (update (SubmitGuess "p") dummyModel) to equal <|
-                    ( submitGuess dummyModel "p", Cmd.none )
+                    ( submitGuess "p" dummyModel, Cmd.none )
             , it "should handle SetGuess messages" <|
                 expect (update (SetGuess "z") dummyModel) to equal <|
                     ( { dummyModel | currentGuess = "z" }, Cmd.none )
@@ -69,10 +69,10 @@ suite =
             ]
         , describe "submitGuess"
             [ it "should update incorrectGuesses when guess not in secretWord" <|
-                expect (submitGuess dummyModel "z").incorrectGuesses to equal <|
+                expect (submitGuess "z" dummyModel).incorrectGuesses to equal <|
                     3
             , it "should update model when guess in secretWord" <|
-                expect (submitGuess dummyModel "p") to equal <|
+                expect (submitGuess "p" dummyModel) to equal <|
                     Model
                         "approvingly"
                         ""
